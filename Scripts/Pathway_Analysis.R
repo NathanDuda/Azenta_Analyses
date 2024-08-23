@@ -16,14 +16,25 @@ pathway_function <- function(normalization_type){
     filter(rowSums(select(., 2:(nrow(group_names) + 2)) == 0) != 4)
   
   # if output exists, write to file 
-  if (nrow(pathway_results > 0)) {
+  if (nrow(pathway_results) > 0) {
+    
+    pathway_results <- pathway_results %>%
+      select(-ID, -Gene.name) %>%
+      pivot_longer(cols = 1:(ncol(.) - 1)) %>%
+      filter(value != 0) %>%
+      select(pathway, name)
+    
+    pathway_results <- as.data.frame(table(pathway_results$name, pathway_results$pathway)) %>%
+      filter(Freq != 0) %>%
+      select(line = Var1, pathway = Var2, n_genes = Freq)
+    
     write.table(pathway_results, file = './Data/Pathway_Results.tsv')
   }
-  if (nrow(pathway_results == 0)) {
-    print('No expressed genes were found in any pathway')
+  if (nrow(pathway_results) == 0) {
+    write.table('No expressed genes were found in any pathway', file = './Data/Pathway_Results.tsv')
   }
+  return(pathway_results)
 }
-
 
 
 

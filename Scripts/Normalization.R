@@ -54,18 +54,23 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   ordered_replicate_names <- replicate_names[order(replicate_factor, replicate_names)]
   
   # write group list and replicate group list to files
-  lapply(ordered_replicate_names, write, "./Data/replicate_names.txt", append=TRUE)
-  lapply(group_names, write, "./Data/group_names.txt", append=TRUE)
+  ordered_replicate_names <- as.data.frame(ordered_replicate_names)
+  colnames(ordered_replicate_names) <- 'V1'
+  write.table(ordered_replicate_names, file = "./Data/replicate_names.txt")
+
+  group_names <- as.data.frame(group_names)
+  colnames(group_names) <- 'V1'
+  write.table(group_names, file = "./Data/group_names.txt")
   
   # check that each group has the same number of 
   t <- table(replicate_groups)
-  if(min(t) != max(t)) {paste0('ERROR: The number of replicates varies accross groups.')}
+  if(min(t) != max(t)) {errorCondition('The number of replicates varies accross groups.')}
   
   # get the number of replicates
-  n_replicates <- length(replicate_names) / length(group_names)
+  n_replicates <- nrow(ordered_replicate_names) / nrow(group_names)
   
   # reorder the counts dataframe so that every n_replicates columns is a new group
-  counts <- counts %>% select(ID, Length, Gene.name, all_of(ordered_replicate_names))
+  counts <- counts %>% select(ID, Length, Gene.name, all_of(ordered_replicate_names$V1))
   
   # TPM normalize if chosen 
   if (normalization_type == 'TPM') {
@@ -93,10 +98,10 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   
   
   # get average expression of replicates in each group 
-  for (i in 1:length(group_names)) {
+  for (i in 1:length(group_names$V1)) {
     
     # get group name - becomes name of averaged column 
-    name <- group_names[i]
+    name <- group_names$V1[i]
     
     # determine the starting and ending columns to average 
     start_col <- (i - 1) * n_replicates + 3
@@ -110,7 +115,12 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   
   # select only the averaged columns
   averaged_exp <- exp %>%
-    select(all_of(c('ID', 'Gene.name', group_names)))
+    select(all_of(c('ID', 'Gene.name', group_names$V1)))
+  
+  # after averaging, set expression values lower than exp_cutoff to 0 
+  averaged_exp <- averaged_exp %>%
+    mutate(across(3:ncol(averaged_exp), ~ if_else(. <= exp_cutoff, 0, .)))
+  
   
   # write averaged expression to file
   write.table(averaged_exp, file = paste0('./Data/Averaged_', normalization_type, '_exp.tsv'))

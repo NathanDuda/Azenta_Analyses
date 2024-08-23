@@ -1,6 +1,6 @@
 
 
-pathway_function <- function(normalization_type){
+germline_function <- function(normalization_type){
   
   germline_data <- read.csv("./PreExisting_Data/germline_data.tsv", sep="") %>%
     select(ID = ENSG, Gene.name = gn_symbol, germline)
@@ -16,12 +16,65 @@ pathway_function <- function(normalization_type){
     filter(rowSums(select(., 2:(nrow(group_names) + 2)) == 0) != 4)
   
   # if output exists, write to file 
-  if (nrow(pathway_results > 0)) {
+  if (nrow(germline_results) > 0) {
     write.table(germline_results, file = './Data/Germline_Results.tsv')
+    
+    # plot results
+    plot_upset_germline_function(germline_results = germline_results)
   }
-  if (nrow(pathway_results == 0)) {
-    print('No expressed genes were found in any pathway')
+  if (nrow(germline_results) == 0) {
+    write.table('No expressed genes were found in any germline', file = './Data/Germline_Results.tsv')
   }
 }
+
+
+plot_upset_germline_function <- function(germline_results){
+  library(ComplexHeatmap)
+  categories <- c('mesoderm', 'endoderm', 'ectoderm')
+  
+  
+  binary_matrix <- sapply(categories, function(x) grepl(x, germline_results$germline))
+  binary_matrix <- as.data.frame(t(as.data.frame(binary_matrix)))
+  colnames(binary_matrix) <- categories
+  
+  binary_matrix <- t(binary_matrix)
+  colnames(binary_matrix) <- germline_results$ID
+  binary_matrix[binary_matrix == T] <- 1
+  
+  upset_matrix <- make_comb_mat(t(binary_matrix))
+  
+
+  # save plot to image
+  #png("./Data/Germline_upset_plot.png", width = 4.5, height = 3, units = 'in', res = 1200)
+  #ComplexHeatmap::UpSet(upset_matrix)
+  #dev.off()
+  
+  
+  
+  library(ggplotify)
+  library(fs)
+  
+  ggplot2::ggsave(ggplotify::as.ggplot(UpSet(upset_matrix)),
+                  filename = fs::path("./Data/Germline_upset_plot.png"),
+                  device = "png",
+                  units = "in",
+                  height = 2.5, width = 4.5)
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
