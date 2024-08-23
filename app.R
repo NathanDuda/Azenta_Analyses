@@ -4,6 +4,7 @@
 library(shiny)
 library(DT)
 library(zip)
+library(shinyalert)
 
 # Define UI for application
 ui <- fluidPage(
@@ -119,6 +120,14 @@ server <- function(input, output, session) {
   observeEvent(input$run, {
     req(raw_counts(), gene_length())
     
+    # simple unit tests
+    if (!(colnames(gene_length())[ncol(gene_length())] %in% colnames(raw_counts()))) {
+      shinyalert::shinyalert("Error", "The raw_counts.csv and sample_name.counts.txt files are not from the same Azenta result", type = "error")
+      return()
+    }
+    
+    
+    
     # Show progress message
     progress <- shiny::Progress$new()
     on.exit(progress$close())
@@ -128,16 +137,33 @@ server <- function(input, output, session) {
     # Always run normalization
     source('./Scripts/Normalization.R')
     if (input$normalization_option == "RPKM") {
+      
       results$data <- normalization_function(raw_counts = raw_counts(), 
                                              gene_length = gene_length(), 
                                              normalization_type = 'RPKM',
                                              exp_cutoff = input$exp_cutoff)
+
+  
+      
     } else if (input$normalization_option == "TPM") {
       results$data <- normalization_function(raw_counts = raw_counts(), 
                                              gene_length = gene_length(), 
                                              normalization_type = 'TPM',
                                              exp_cutoff = input$exp_cutoff)
     }
+    
+    # check that each group has the same number of replicates
+    replicate_groups <- read.table("./Data/replicate_groups.txt", quote="\"", comment.char="")
+    t <- table(replicate_groups)
+    
+    if (min(t) != max(t)) {
+      shinyalert::shinyalert("Error", "The number of replicates varies across groups.", type = "error")
+      return()
+    }
+    
+    
+    
+    
     progress$set(message = "Normalization complete", value = 0.3)
     progress_message("Normalization complete")
     

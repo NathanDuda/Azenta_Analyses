@@ -50,6 +50,7 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   
   # order the replicate names based on their groups 
   replicate_groups <- sapply(strsplit(replicate_names, "\\d+"), `[`, 1)
+  write.table(as.data.frame(replicate_groups), file = './Data/replicate_groups.txt') # only for unit test
   replicate_factor <- factor(replicate_groups, levels = group_names)
   ordered_replicate_names <- replicate_names[order(replicate_factor, replicate_names)]
   
@@ -62,9 +63,10 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   colnames(group_names) <- 'V1'
   write.table(group_names, file = "./Data/group_names.txt")
   
-  # check that each group has the same number of 
+  # check that each group has the same number of replicates
   t <- table(replicate_groups)
-  if(min(t) != max(t)) {errorCondition('The number of replicates varies accross groups.')}
+  if(min(t) != max(t)) {#stop("The number of replicates varies accross groups.")
+    return()}
   
   # get the number of replicates
   n_replicates <- nrow(ordered_replicate_names) / nrow(group_names)
