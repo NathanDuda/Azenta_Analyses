@@ -1,8 +1,8 @@
 
 
 
-
 library(shiny)
+library(DT)
 library(zip)
 
 # Define UI for application
@@ -32,8 +32,6 @@ ui <- fluidPage(
                 accept = ".csv"),
       fileInput("gene_lengths_input", "sample_name.counts.txt file",
                 accept = ".txt"),
-      span(class = "extra-info", "This file contains the raw gene expression counts for each sample."),
-      
       radioButtons("normalization_option", "Normalization method:",
                    choices = list("RPKM" = "RPKM", "TPM" = "TPM"),
                    selected = "RPKM"), # Default option
@@ -58,7 +56,7 @@ ui <- fluidPage(
     
     mainPanel(
       tabsetPanel(
-        tabPanel("Results", 
+        tabPanel("All Results", 
                  textOutput("progress"),  # Display progress messages here
                  uiOutput("download_link")  # Display download link here
         ),
@@ -69,7 +67,13 @@ ui <- fluidPage(
                  p("4. **Expression Cutoff**: Only expression values higher than this cutoff are considered in the analysis. A cutoff of 1 is the default. Cutoff values lower than 1 are not recommended."),
                  p("5. **Select Analyses to Run**: Choose which analyses you want to perform, including Pathway analysis, Germline analysis, and Differential Gene Expression (DGE) analysis."),
                  p("6. **Choose first group for DGE analysis**: Select the first group for Differential Gene Expression analysis. The analysis will run comparing all of the replicates of this group to all of the replicates of the second group chosen"),
-                 p("7. **Choose group to compare to**: Select the group to compare against the first group for Differential Gene Expression analysis.")
+                 p("7. **Choose group to compare to**: Select a DIFFERENT group to compare against the first group for Differential Gene Expression analysis.")
+        ),
+        tabPanel("Pathway Table", 
+                 DTOutput("pathway_table")  # Display Pathway analysis results here
+        ),
+        tabPanel("Germline Table", 
+                 DTOutput("germline_table")  # Display Germline analysis results here
         )
       )
     )
@@ -108,7 +112,7 @@ server <- function(input, output, session) {
   })
   
   # Reactive expression to store results of analyses
-  results <- reactiveValues(data = NULL)
+  results <- reactiveValues(data = NULL, pathway_data = NULL, germline_data = NULL)
   progress_message <- reactiveVal("")  # Store progress messages
   
   # Observe event when the Run button is pressed
@@ -142,15 +146,21 @@ server <- function(input, output, session) {
       source('./Scripts/Pathway_Analysis.R')
       progress$set(message = "Running pathway analysis...", value = 0.5)
       progress_message("Running pathway analysis...")
-      pathway_function(normalization_type = input$normalization_option)
+      results$pathway_data <- pathway_function(normalization_type = input$normalization_option)
       
+      output$pathway_table <- renderDT({
+        datatable(results$pathway_data, options = list(pageLength = 25, searchHighlight = TRUE))
+      })
     }
     if ("germline_analysis" %in% input$analyses) {
       source('./Scripts/Germline_Analysis.R')
       progress$set(message = "Running germline analysis...", value = 0.7)
       progress_message("Running germline analysis...")
-      germline_function(normalization_type = input$normalization_option)
+      results$germline_data <- germline_function(normalization_type = input$normalization_option)
       
+      output$germline_table <- renderDT({
+        datatable(results$germline_data, options = list(pageLength = 25, searchHighlight = TRUE))
+      })
     }
     if ("DGE_analysis" %in% input$analyses) {
       req(input$DGE_group1, input$DGE_group2)
@@ -197,6 +207,3 @@ server <- function(input, output, session) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
-
-
-

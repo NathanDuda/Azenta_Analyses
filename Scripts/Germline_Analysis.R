@@ -3,7 +3,7 @@
 germline_function <- function(normalization_type){
   
   germline_data <- read.csv("./PreExisting_Data/germline_data.tsv", sep="") %>%
-    select(ID = ENSG, Gene.name = gn_symbol, germline)
+    select(ID = ENSG, everything())
   
   exp <- read.csv(paste0('./Data/Averaged_', normalization_type, '_exp.tsv'), sep="")
   
@@ -12,8 +12,8 @@ germline_function <- function(normalization_type){
   
   # get results 
   germline_results <- exp %>%
-    merge(., germline_data, by = c('ID', 'Gene.name')) %>% 
-    filter(rowSums(select(., 2:(nrow(group_names) + 2)) == 0) != 4)
+    merge(., germline_data, by = 'ID') %>% 
+    filter(rowSums(select(., 3:(nrow(group_names) + 2)) == 0) != 4)
   
   # if output exists, write to file 
   if (nrow(germline_results) > 0) {
@@ -25,23 +25,42 @@ germline_function <- function(normalization_type){
   if (nrow(germline_results) == 0) {
     write.table('No expressed genes were found in any germline', file = './Data/Germline_Results.tsv')
   }
+  
+  germline_table <- germline_results %>%
+    pivot_longer(cols = (ncol(germline_results) -2):ncol(germline_results), names_to = "column", values_to = "value") %>%
+    group_by(ID) %>%
+    filter(value == 1) %>%
+    summarize(combined = paste(column, collapse = ", ")) %>%
+    merge(germline_results, by = "ID") %>%
+    select(ID, Gene.name, germline_layer = combined)
+  
+  return(germline_table)
 }
 
 
 plot_upset_germline_function <- function(germline_results){
   library(ComplexHeatmap)
-  categories <- c('mesoderm', 'endoderm', 'ectoderm')
+  categories <- c('mesoderm', 'endoderm', 'neuroectoderm')
   
   
-  binary_matrix <- sapply(categories, function(x) grepl(x, germline_results$germline))
-  binary_matrix <- as.data.frame(t(as.data.frame(binary_matrix)))
-  colnames(binary_matrix) <- categories
+  binary_matrix <- germline_results %>%
+    pivot_longer(cols = 3:(nrow(group_names) + 2)) %>%
+    filter(value != 0) %>%
+    select(neuroectoderm, endoderm, mesoderm) %>%
+    as.data.frame()
   
-  binary_matrix <- t(binary_matrix)
-  colnames(binary_matrix) <- germline_results$ID
-  binary_matrix[binary_matrix == T] <- 1
   
-  upset_matrix <- make_comb_mat(t(binary_matrix))
+  
+  ##binary_matrix <- sapply(categories, function(x) grepl(x, germline_results$germline))
+  #binary_matrix <- as.data.frame(t(as.data.frame(binary_matrix)))
+  #colnames(binary_matrix) <- categories
+  
+  #binary_matrix <- t(binary_matrix)
+  #rownames(binary_matrix) <- germline_results$ID
+  #binary_matrix[binary_matrix == T] <- 1
+  
+
+  upset_matrix <- make_comb_mat(binary_matrix)
   
 
   # save plot to image
@@ -54,7 +73,7 @@ plot_upset_germline_function <- function(germline_results){
   library(ggplotify)
   library(fs)
   
-  ggplot2::ggsave(ggplotify::as.ggplot(UpSet(upset_matrix)),
+  ggplot2::ggsave(ggplotify::as.ggplot(UpSet(upset_matrix, comb_order = rev(order(comb_size(upset_matrix))))),
                   filename = fs::path("./Data/Germline_upset_plot.png"),
                   device = "png",
                   units = "in",
