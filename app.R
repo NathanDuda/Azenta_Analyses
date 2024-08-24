@@ -1,6 +1,3 @@
-
-
-
 library(shiny)
 library(DT)
 library(zip)
@@ -31,7 +28,7 @@ ui <- fluidPage(
     sidebarPanel(
       fileInput("raw_counts_input", "raw_counts.csv file",
                 accept = ".csv"),
-      fileInput("gene_lengths_input", "sample_name.counts.txt file",
+      fileInput("gene_lengths_input", "[sample_name].counts.txt file",
                 accept = ".txt"),
       radioButtons("normalization_option", "Normalization method:",
                    choices = list("RPKM" = "RPKM", "TPM" = "TPM"),
@@ -63,7 +60,7 @@ ui <- fluidPage(
         ),
         tabPanel("Input Descriptions",
                  p("1. **raw_counts.csv**: This file can be found in the hit-counts folder of the Azenta results."),
-                 p("2. **sample_name.counts.txt file**: This file is found in the hit-counts folder of the Azenta results. Choose a file with any sample_name as long as the file name is in the format of {sample_name}.counts.txt, where {sample_name} is replaced with the name of the sample. It doesn't matter which file because this is only to get gene lengths."),
+                 p("2. **[sample_name].counts.txt file**: This file is found in the hit-counts folder of the Azenta results. Choose a file with any sample_name as long as the file name is in the format of {sample_name}.counts.txt, where {sample_name} is replaced with the name of the sample. It doesn't matter which file because this is only to get gene lengths."),
                  p("3. **Normalization method**: Choose how to normalize the raw counts. The options are RPKM (Reads Per Kilobase of transcript per Million mapped reads) and TPM (Transcripts Per Million)."),
                  p("4. **Expression Cutoff**: Only expression values higher than this cutoff are considered in the analysis. A cutoff of 1 is the default. Cutoff values lower than 1 are not recommended."),
                  p("5. **Select Analyses to Run**: Choose which analyses you want to perform, including Pathway analysis, Germline analysis, and Differential Gene Expression (DGE) analysis."),
@@ -126,8 +123,6 @@ server <- function(input, output, session) {
       return()
     }
     
-    
-    
     # Show progress message
     progress <- shiny::Progress$new()
     on.exit(progress$close())
@@ -142,8 +137,8 @@ server <- function(input, output, session) {
                                              gene_length = gene_length(), 
                                              normalization_type = 'RPKM',
                                              exp_cutoff = input$exp_cutoff)
-
-  
+      
+      
       
     } else if (input$normalization_option == "TPM") {
       results$data <- normalization_function(raw_counts = raw_counts(), 
@@ -160,9 +155,6 @@ server <- function(input, output, session) {
       shinyalert::shinyalert("Error", "The number of replicates varies across groups.", type = "error")
       return()
     }
-    
-    
-    
     
     progress$set(message = "Normalization complete", value = 0.3)
     progress_message("Normalization complete")
@@ -212,24 +204,20 @@ server <- function(input, output, session) {
     })
     
     output$download_zip <- downloadHandler(
-      filename = function() { "Output_Data.zip" },
-      content = function(file) {
-        # Create a temporary directory
-        tmpdir <- tempdir()
-        
-        # Create the zip file from the ./Data folder
-        zip(zipfile = file, files = dir('Data', full.names = TRUE))
+      filename = function() {
+        paste("Analysis_Results_", Sys.Date(), ".zip", sep = "")
       },
-      contentType = "application/zip"
+      content = function(file) {
+        zip(zipfile = file, files = dir("./Data", full.names = TRUE))
+      }
     )
   })
   
-  # Display progress messages
+  # Show progress messages in mainPanel
   output$progress <- renderText({
     progress_message()
   })
-  
 }
 
-# Run the application
+# Run the application 
 shinyApp(ui = ui, server = server)
