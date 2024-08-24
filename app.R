@@ -5,6 +5,8 @@ library(shinyalert)
 library(dplyr)
 library(reshape2)
 
+aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+
 # Define UI for application
 ui <- fluidPage(
   # Add custom CSS to center the download button
@@ -132,7 +134,7 @@ server <- function(input, output, session) {
     progress_message("Running normalization...")
     
     # Always run normalization
-    source('./Scripts/Normalization.R')
+    source(paste0(aws_prefix, 'Scripts/Normalization.R'))
     if (input$normalization_option == "RPKM") {
       
       results$data <- normalization_function(raw_counts = raw_counts(), 
@@ -150,7 +152,7 @@ server <- function(input, output, session) {
     }
     
     # check that each group has the same number of replicates
-    replicate_groups <- read.table("./Data/replicate_groups.txt", quote="\"", comment.char="")
+    replicate_groups <- read.table(paste0(aws_prefix, "Data/replicate_groups.txt"), quote="\"", comment.char="")
     t <- table(replicate_groups)
     
     if (min(t) != max(t)) {
@@ -163,7 +165,7 @@ server <- function(input, output, session) {
     
     # Run other selected analyses
     if ("pathway_analysis" %in% input$analyses) {
-      source('./Scripts/Pathway_Analysis.R')
+      source(paste0(aws_prefix, 'Scripts/Pathway_Analysis.R'))
       progress$set(message = "Running pathway analysis...", value = 0.5)
       progress_message("Running pathway analysis...")
       results$pathway_data <- pathway_function(normalization_type = input$normalization_option)
@@ -173,7 +175,7 @@ server <- function(input, output, session) {
       })
     }
     if ("germline_analysis" %in% input$analyses) {
-      source('./Scripts/Germline_Analysis.R')
+      source(paste0(aws_prefix, 'Scripts/Germline_Analysis.R'))
       progress$set(message = "Running germline analysis...", value = 0.7)
       progress_message("Running germline analysis...")
       results$germline_data <- germline_function(normalization_type = input$normalization_option)
@@ -185,7 +187,7 @@ server <- function(input, output, session) {
     if ("DGE_analysis" %in% input$analyses) {
       req(input$DGE_group1, input$DGE_group2)
       
-      source('./Scripts/DGE_Analysis.R')
+      source(paste0(aws_prefix, 'Scripts/DGE_Analysis.R'))
       progress$set(message = "Running DGE analysis...", value = 0.9)
       progress_message("Running DGE analysis...")
       results$data$DGE <- DGE_function(selected_group_1 = input$DGE_group1,
@@ -197,7 +199,7 @@ server <- function(input, output, session) {
     progress$set(message = "All analyses complete", value = 1)
     progress_message("All analyses are complete.")
     
-    # Create zip file of the ./Data folder
+    # Create zip file of the Data folder
     output$download_link <- renderUI({
       tagList(
         # Create a large download button
@@ -210,7 +212,7 @@ server <- function(input, output, session) {
         paste("Analysis_Results_", Sys.Date(), ".zip", sep = "")
       },
       content = function(file) {
-        zip(zipfile = file, files = dir("./Data", full.names = TRUE))
+        zip(zipfile = file, files = dir(paste0(aws_prefix, "Data"), full.names = TRUE))
       }
     )
   })

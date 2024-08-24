@@ -1,13 +1,14 @@
 
 
 germline_function <- function(normalization_type){
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/Data'
   
-  germline_data <- read.csv("./PreExisting_Data/germline_data.tsv", sep="") %>%
+  germline_data <- read.csv(paste0(aws_prefix, "PreExisting_Data/germline_data.tsv"), sep="") %>%
     select(ID = ENSG, everything())
   
-  exp <- read.csv(paste0('./Data/Averaged_', normalization_type, '_exp.tsv'), sep="")
+  exp <- read.csv(paste0(paste0(aws_prefix, 'Data/Averaged_'), normalization_type, '_exp.tsv'), sep="")
   
-  group_names <- read.table("./Data/group_names.txt", quote="\"", comment.char="")
+  group_names <- read.table(paste0(aws_prefix, "Data/group_names.txt"), quote="\"", comment.char="")
   
   
   # get results 
@@ -17,13 +18,13 @@ germline_function <- function(normalization_type){
   
   # if output exists, write to file 
   if (nrow(germline_results) > 0) {
-    write.table(germline_results, file = './Data/Germline_Results.tsv')
+    write.table(germline_results, file = paste0(aws_prefix, 'Data/Germline_Results.tsv'))
     
     # plot results
     plot_upset_germline_function(germline_results = germline_results, group_names = group_names)
   }
   if (nrow(germline_results) == 0) {
-    write.table('No expressed genes were found in any germline', file = './Data/Germline_Results.tsv')
+    write.table('No expressed genes were found in any germline', file = paste0(aws_prefix, 'Data/Germline_Results.tsv'))
   }
   
   germline_table <- germline_results %>%
@@ -39,6 +40,8 @@ germline_function <- function(normalization_type){
 
 
 plot_upset_germline_function <- function(germline_results, group_names){
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  
   library(ComplexHeatmap)
   categories <- c('mesoderm', 'endoderm', 'neuroectoderm')
   
@@ -74,7 +77,7 @@ plot_upset_germline_function <- function(germline_results, group_names){
   library(fs)
   
   ggplot2::ggsave(ggplotify::as.ggplot(UpSet(upset_matrix, comb_order = rev(order(comb_size(upset_matrix))))),
-                  filename = fs::path("./Data/Germline_upset_plot.png"),
+                  filename = fs::path(paste0(aws_prefix, "Data/Germline_upset_plot.png")),
                   device = "png",
                   units = "in",
                   height = 2.5, width = 4.5)

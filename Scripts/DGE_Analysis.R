@@ -7,14 +7,15 @@
 
 
 DGE_function <- function(selected_group_1, selected_group_2) {
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   
   
-  raw_counts <-  read.csv("./Data/Raw_Counts_ProteinCodingGenes.tsv", sep="") %>%
+  raw_counts <-  read.csv(paste0(aws_prefix, "Data/Raw_Counts_ProteinCodingGenes.tsv"), sep="") %>%
     select(ID, Gene.name, everything())
   
   
-  group_names <- read.table("./Data/group_names.txt", quote="\"", comment.char="")
-  replicate_names <- read.table("./Data/replicate_names.txt", quote="\"", comment.char="")
+  group_names <- read.table(paste0(aws_prefix, "Data/group_names.txt"), quote="\"", comment.char="")
+  replicate_names <- read.table(paste0(aws_prefix, "Data/replicate_names.txt"), quote="\"", comment.char="")
   
   n_replicates <- nrow(replicate_names) / nrow(group_names)
   
@@ -77,6 +78,7 @@ DGE_function <- function(selected_group_1, selected_group_2) {
 
 
 plot_DGE_function <- function(res, dds, g1, g2) {
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   
   res_df <- as.data.frame(res)
   
@@ -115,7 +117,7 @@ plot_DGE_function <- function(res, dds, g1, g2) {
     geom_vline(xintercept = c(-1, 1), linetype = "dashed", color = "black") +
     geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black")
   
-  ggsave(volcano_plot, file = './Data/DGE_volcano_plot.png', height = 5, width = 7)
+  ggsave(volcano_plot, file = paste0(aws_prefix, 'Data/DGE_volcano_plot.png'), height = 5, width = 7)
   
   
   # Select significantly differentially expressed genes
@@ -163,7 +165,7 @@ plot_DGE_function <- function(res, dds, g1, g2) {
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
   
-  ggsave(heatmap, file = './Data/DGE_heatmap.png', height = 6, width = 5)
+  ggsave(heatmap, file = paste0(aws_prefix, 'Data/DGE_heatmap.png'), height = 6, width = 5)
   
 }
 

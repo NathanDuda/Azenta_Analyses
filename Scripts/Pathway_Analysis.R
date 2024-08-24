@@ -2,12 +2,12 @@
 
 pathway_function <- function(normalization_type){
   
-  pathway_data <- read.csv("./PreExisting_Data/pathway_data.tsv", sep="") %>%
+  pathway_data <- read.csv(paste0(aws_prefix, "PreExisting_Data/pathway_data.tsv"), sep="") %>%
     select(ID = ENSG, Gene.name = gn_symbol, pathway)
   
-  exp <- read.csv(paste0('./Data/Averaged_', normalization_type, '_exp.tsv'), sep="")
+  exp <- read.csv(paste0(aws_prefix, 'Data/Averaged_', normalization_type, '_exp.tsv'), sep="")
   
-  group_names <- read.table("./Data/group_names.txt", quote="\"", comment.char="")
+  group_names <- read.table(paste0(aws_prefix, "Data/group_names.txt"), quote="\"", comment.char="")
   
   
   # get results 
@@ -28,10 +28,10 @@ pathway_function <- function(normalization_type){
       filter(Freq != 0) %>%
       select(line = Var1, pathway = Var2, n_genes = Freq)
     
-    write.table(pathway_results, file = './Data/Pathway_Results.tsv')
+    write.table(pathway_results, file = paste0(aws_prefix, 'Data/Pathway_Results.tsv'))
   }
   if (nrow(pathway_results) == 0) {
-    write.table('No expressed genes were found in any pathway', file = './Data/Pathway_Results.tsv')
+    write.table('No expressed genes were found in any pathway', file = paste0(aws_prefix, 'Data/Pathway_Results.tsv'))
   }
   
   pathway_table <- pathway_results_original %>%

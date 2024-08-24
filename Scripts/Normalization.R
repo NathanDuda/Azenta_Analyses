@@ -20,9 +20,10 @@
 
 
 normalization_function <- function(raw_counts, gene_lengths, normalization_type, exp_cutoff) {
-    
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  
   # import pre-existing data 
-  protein_coding_ENSGs <- read.csv("./PreExisting_Data/protein_coding_ENSG_ids.tsv", sep="")
+  protein_coding_ENSGs <- read.csv(paste0(aws_prefix, "PreExisting_Data/protein_coding_ENSG_ids.tsv"), sep="")
   
   
   # keep only protein coding genes
@@ -31,7 +32,7 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
     select(ID, Gene.name, everything())
   
   # write protein coding genes to file
-  write.table(raw_counts, file = './Data/Raw_Counts_ProteinCodingGenes.tsv')
+  write.table(raw_counts, file = paste0(aws_prefix, 'Data/Raw_Counts_ProteinCodingGenes.tsv'))
   
   
   # format the input files 
@@ -50,18 +51,18 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   
   # order the replicate names based on their groups 
   replicate_groups <- sapply(strsplit(replicate_names, "\\d+"), `[`, 1)
-  write.table(as.data.frame(replicate_groups), file = './Data/replicate_groups.txt') # only for unit test
+  write.table(as.data.frame(replicate_groups), file = paste0(aws_prefix, 'Data/replicate_groups.txt')) # only for unit test
   replicate_factor <- factor(replicate_groups, levels = group_names)
   ordered_replicate_names <- replicate_names[order(replicate_factor, replicate_names)]
   
   # write group list and replicate group list to files
   ordered_replicate_names <- as.data.frame(ordered_replicate_names)
   colnames(ordered_replicate_names) <- 'V1'
-  write.table(ordered_replicate_names, file = "./Data/replicate_names.txt")
+  write.table(ordered_replicate_names, file = paste0(aws_prefix, "Data/replicate_names.txt"))
 
   group_names <- as.data.frame(group_names)
   colnames(group_names) <- 'V1'
-  write.table(group_names, file = "./Data/group_names.txt")
+  write.table(group_names, file = paste0(aws_prefix, "Data/group_names.txt"))
   
   # check that each group has the same number of replicates
   t <- table(replicate_groups)
@@ -95,7 +96,7 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
     mutate(across(3:ncol(norm_counts), ~ if_else(. <= exp_cutoff, 0, .)))
   
   # write normalized counts to file
-  write.table(exp, file = paste0('./Data/', normalization_type, '_normalized_exp.tsv'))
+  write.table(exp, file = paste0(aws_prefix, 'Data/', normalization_type, '_normalized_exp.tsv'))
   
   
   
@@ -125,7 +126,7 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   
   
   # write averaged expression to file
-  write.table(averaged_exp, file = paste0('./Data/Averaged_', normalization_type, '_exp.tsv'))
+  write.table(averaged_exp, file = paste0(aws_prefix, 'Data/Averaged_', normalization_type, '_exp.tsv'))
   
   
 }
