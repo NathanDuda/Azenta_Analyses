@@ -2,7 +2,7 @@
 # assumes every group has the same number of replicates 
 # make sure tpm and rpkm values are actually accurate 
 
-library(tidyverse)
+#library(tidyverse)
 
 # indicate the type of normalization
 #normalization_type <- 'RPKM'

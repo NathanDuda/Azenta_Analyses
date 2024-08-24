@@ -2,6 +2,8 @@ library(shiny)
 library(DT)
 library(zip)
 library(shinyalert)
+library(dplyr)
+library(reshape2)
 
 # Define UI for application
 ui <- fluidPage(

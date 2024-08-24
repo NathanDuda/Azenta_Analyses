@@ -16,7 +16,7 @@ pathway_function <- function(normalization_type){
     filter(rowSums(select(., 2:(nrow(group_names) + 2)) == 0) != 4)
   
   # if output exists, write to file 
-  if (nrow(pathway_results) > 0) {
+  if (nrow(pathway_results_original) > 0) {
     
     pathway_results <- pathway_results_original %>%
       select(-ID, -Gene.name) %>%

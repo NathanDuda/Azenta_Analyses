@@ -20,7 +20,7 @@ germline_function <- function(normalization_type){
     write.table(germline_results, file = './Data/Germline_Results.tsv')
     
     # plot results
-    plot_upset_germline_function(germline_results = germline_results)
+    plot_upset_germline_function(germline_results = germline_results, group_names = group_names)
   }
   if (nrow(germline_results) == 0) {
     write.table('No expressed genes were found in any germline', file = './Data/Germline_Results.tsv')
@@ -38,7 +38,7 @@ germline_function <- function(normalization_type){
 }
 
 
-plot_upset_germline_function <- function(germline_results){
+plot_upset_germline_function <- function(germline_results, group_names){
   library(ComplexHeatmap)
   categories <- c('mesoderm', 'endoderm', 'neuroectoderm')
   
