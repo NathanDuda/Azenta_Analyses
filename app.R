@@ -4,6 +4,12 @@ library(zip)
 library(shinyalert)
 library(dplyr)
 library(reshape2)
+library(tidyr)
+library(fs)
+library(ggplotify)
+library(DESeq2)
+#library(ComplexHeatmap)
+#library(tidyverse)
 
 aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
 
