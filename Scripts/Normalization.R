@@ -1,4 +1,5 @@
 
+
 # assumes every group has the same number of replicates 
 # make sure tpm and rpkm values are actually accurate 
 
@@ -19,12 +20,23 @@
 
 
 
-normalization_function <- function(raw_counts, gene_lengths, normalization_type, exp_cutoff) {
-  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+normalization_function <- function(project_path, normalization_type, exp_cutoff) {
+  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+  
+  # get raw_counts file path 
+  raw_counts_path <- paste0(project_path, 'hit-counts/raw_counts.csv')
+  
+  # select gene lengths file
+  file_list <- list.files(paste0(project_path, 'hit-counts/'))
+  file_list <- file_list[!file_list %in% c('raw_counts.csv', 'TPM_values.csv')]
+  gene_length_path <- paste0(project_path, 'hit-counts/', file_list[1])
+  
+  # import the raw_counts and gene lengths files
+  raw_counts <- read.csv(raw_counts_path)
+  gene_lengths <- read.csv(gene_length_path, sep = "")
   
   # import pre-existing data 
-  protein_coding_ENSGs <- read.csv(paste0(aws_prefix, "PreExisting_Data/protein_coding_ENSG_ids.tsv"), sep="")
-  
+  protein_coding_ENSGs <- read.csv(paste0(aws_prefix, "PreExisting_Data/protein_coding_ENSG_ids.tsv"), sep = "")
   
   # keep only protein coding genes
   raw_counts <- raw_counts %>%
@@ -59,7 +71,7 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   ordered_replicate_names <- as.data.frame(ordered_replicate_names)
   colnames(ordered_replicate_names) <- 'V1'
   write.table(ordered_replicate_names, file = paste0(aws_prefix, "Data/replicate_names.txt"))
-
+  
   group_names <- as.data.frame(group_names)
   colnames(group_names) <- 'V1'
   write.table(group_names, file = paste0(aws_prefix, "Data/group_names.txt"))
@@ -130,3 +142,5 @@ normalization_function <- function(raw_counts, gene_lengths, normalization_type,
   
   
 }
+
+  

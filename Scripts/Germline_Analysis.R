@@ -1,7 +1,7 @@
 
 
 germline_function <- function(normalization_type){
-  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
   germline_data <- read.csv(paste0(aws_prefix, "PreExisting_Data/germline_data.tsv"), sep="") %>%
     select(ID = ENSG, everything())
@@ -40,7 +40,7 @@ germline_function <- function(normalization_type){
 
 
 plot_upset_germline_function <- function(germline_results, group_names){
-  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
   categories <- c('mesoderm', 'endoderm', 'neuroectoderm')
   
@@ -61,10 +61,10 @@ plot_upset_germline_function <- function(germline_results, group_names){
   #rownames(binary_matrix) <- germline_results$ID
   #binary_matrix[binary_matrix == T] <- 1
   
-
+  
   upset_matrix <- make_comb_mat(binary_matrix)
   
-
+  
   # save plot to image
   #png("./Data/Germline_upset_plot.png", width = 4.5, height = 3, units = 'in', res = 1200)
   #ComplexHeatmap::UpSet(upset_matrix)
@@ -74,28 +74,15 @@ plot_upset_germline_function <- function(germline_results, group_names){
   
   library(ggplotify)
   library(fs)
-  
-  ggplot2::ggsave(ggplotify::as.ggplot(UpSet(upset_matrix, comb_order = rev(order(comb_size(upset_matrix))))),
-                  filename = fs::path(paste0(aws_prefix, "Data/Germline_upset_plot.png")),
-                  device = "png",
-                  units = "in",
-                  height = 2.5, width = 4.5)
-  
+  #pdf(file = NULL)
+  #dev.off()  
+  #ggplot2::ggsave(ggplotify::as.ggplot(UpSet(upset_matrix, comb_order = rev(order(comb_size(upset_matrix))))),
+  #                filename = fs::path(paste0(aws_prefix, "Data/Germline_upset_plot.png")),
+  #                device = "png",
+  #                units = "in",
+  #                height = 2.5, width = 4.5)
+  ragg::agg_png(fs::path(paste0(aws_prefix, "Data/Germline_upset_plot.png")),
+                width = 4.5, height = 2.5, units = "in", res = 300)
+  print(ggplotify::as.ggplot(UpSet(upset_matrix, comb_order = rev(order(comb_size(upset_matrix))))))
+  dev.off()
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

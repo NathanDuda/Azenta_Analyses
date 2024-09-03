@@ -1,13 +1,12 @@
 
 
-
 #selected_group_1 <- c('ES.hTSC.CM.')
 #selected_group_2 <- c('LS.hTSC.CM.')
 
 
 
 DGE_function <- function(selected_group_1, selected_group_2) {
-  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
   
   raw_counts <-  read.csv(paste0(aws_prefix, "Data/Raw_Counts_ProteinCodingGenes.tsv"), sep="") %>%
@@ -70,7 +69,7 @@ DGE_function <- function(selected_group_1, selected_group_2) {
   # make plots
   plot_DGE_function(res, dds, g1, g2)
   
-
+  
   
 }
 
@@ -78,13 +77,13 @@ DGE_function <- function(selected_group_1, selected_group_2) {
 
 
 plot_DGE_function <- function(res, dds, g1, g2) {
-  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
   res_df <- as.data.frame(res)
   
   # Add a column to highlight significant genes
   res_df$significance <- ifelse(res_df$padj < 0.05 & res_df$log2FoldChange > 1, paste0(g2, "_biased"),
-                               ifelse(res_df$padj < 0.05 & res_df$log2FoldChange < -1, paste0(g1, "_biased"), "Not Significant"))
+                                ifelse(res_df$padj < 0.05 & res_df$log2FoldChange < -1, paste0(g1, "_biased"), "Not Significant"))
   
   res_df <- na.omit(res_df)
   
@@ -168,4 +167,5 @@ plot_DGE_function <- function(res, dds, g1, g2) {
   ggsave(heatmap, file = paste0(aws_prefix, 'Data/DGE_heatmap.png'), height = 6, width = 5)
   
 }
+
 
