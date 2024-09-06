@@ -21,7 +21,7 @@
 
 
 normalization_function <- function(project_path, normalization_type, exp_cutoff) {
-  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   
   # get raw_counts file path 
   raw_counts_path <- paste0(project_path, 'hit-counts/raw_counts.csv')

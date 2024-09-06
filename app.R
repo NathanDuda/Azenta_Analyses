@@ -1,6 +1,6 @@
 library(shiny)
 library(DT)
-library(zip) # use utils instead (install on aws) and use flag -j
+library(utils)
 library(shinyalert)
 library(dplyr)
 library(reshape2)
@@ -13,7 +13,8 @@ library(tibble)
 library(ragg)
 library(ComplexHeatmap)
 
-aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+#aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
 
 # Update UI for application
 ui <- fluidPage(
@@ -68,13 +69,12 @@ ui <- fluidPage(
                uiOutput("download_link")
       ),
       tabPanel("Input Descriptions",
-               p("1. **raw_counts.csv**: This file is located in the selected directory."),
-               p("2. **[sample_name].counts.txt file**: This file is also located in the selected directory."),
-               p("3. **Normalization method**: Choose how to normalize the raw counts. The options are RPKM (Reads Per Kilobase of transcript per Million mapped reads) and TPM (Transcripts Per Million)."),
-               p("4. **Expression Cutoff**: Only expression values higher than this cutoff are considered in the analysis. A cutoff of 1 is the default. Cutoff values lower than 1 are not recommended."),
-               p("5. **Select Analyses to Run**: Choose which analyses you want to perform, including Pathway analysis, Germline analysis, and Differential Gene Expression (DGE) analysis."),
-               p("6. **Choose first group for DGE analysis**: Select the first group for Differential Gene Expression analysis. The analysis will run comparing all of the replicates of this group to all of the replicates of the second group chosen."),
-               p("7. **Choose group to compare to**: Select a DIFFERENT group to compare against the first group for Differential Gene Expression analysis.")
+               p("**Select Project Directory**: Choose an Azenta project to run analyses for. Only projects inside of the Azenta_Projects directory in AWS are able to be chosen."),
+               p("**Normalization method**: Choose how to normalize the raw counts. The options are RPKM (Reads Per Kilobase of transcript per Million mapped reads) and TPM (Transcripts Per Million)."),
+               p("**Expression Cutoff**: Only expression values higher than this cutoff are considered in the analysis. A cutoff of 1 is the default. Cutoff values lower than 1 are not recommended."),
+               p("**Select Analyses to Run**: Choose which analyses you want to perform, including Pathway analysis, Germline analysis, and Differential Gene Expression (DGE) analysis."),
+               p("**Choose first group for DGE analysis**: Select the first group for Differential Gene Expression analysis. The analysis will run comparing all of the replicates of this group to all of the replicates of the second group chosen."),
+               p("**Choose group to compare to**: Select a DIFFERENT group to compare against the first group for Differential Gene Expression analysis.")
       ),
       tabPanel("Pathway Table", 
                DTOutput("pathway_table")
@@ -139,7 +139,7 @@ server <- function(input, output, session) {
     req(project_path())
     
     
-    if (input$DGE_group1 == input$DGE_group2) {
+    if (("DGE_analysis" %in% input$analyses) & (input$DGE_group1 == input$DGE_group2)) {
       shinyalert::shinyalert("Error", "The same groups were chosen for DGE Analysis.", type = "error")
       return()
     }
@@ -222,10 +222,10 @@ server <- function(input, output, session) {
     
     output$download_zip <- downloadHandler(
       filename = function() {
-        paste("Analysis_Results_", Sys.Date(), ".zip", sep = "")
+        paste("Analysis_Results_", input$project, '_', Sys.Date(), ".zip", sep = "")
       },
       content = function(file) {
-        zip(zipfile = file, files = dir(paste0(aws_prefix, "Data"), full.names = TRUE))
+        utils::zip(file, files = dir(paste0(aws_prefix, "Data")), flags = '-j')
       }
     )
   })

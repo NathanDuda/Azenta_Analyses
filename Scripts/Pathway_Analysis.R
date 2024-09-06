@@ -1,7 +1,7 @@
 
 
 pathway_function <- function(normalization_type){
-  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   
   pathway_data <- read.csv(paste0(aws_prefix, "PreExisting_Data/pathway_data.tsv"), sep="") %>%
     select(ID = ENSG, Gene.name = gn_symbol, pathway)

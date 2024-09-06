@@ -1,7 +1,7 @@
 
 
 germline_function <- function(normalization_type){
-  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   
   germline_data <- read.csv(paste0(aws_prefix, "PreExisting_Data/germline_data.tsv"), sep="") %>%
     select(ID = ENSG, everything())
@@ -40,7 +40,7 @@ germline_function <- function(normalization_type){
 
 
 plot_upset_germline_function <- function(germline_results, group_names){
-  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   
   categories <- c('mesoderm', 'endoderm', 'neuroectoderm')
   
