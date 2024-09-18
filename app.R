@@ -1,6 +1,6 @@
 library(shiny)
 library(DT)
-library(utils)
+library(zip)
 library(shinyalert)
 library(dplyr)
 library(reshape2)
@@ -13,8 +13,8 @@ library(tibble)
 library(ragg)
 library(ComplexHeatmap)
 
-aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
-#aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
+#aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
 
 # Update UI for application
 ui <- fluidPage(
@@ -121,8 +121,17 @@ server <- function(input, output, session) {
     group_names <- colnames(raw_counts)
     replicate_names <- group_names[!group_names %in% c('ID', 'Length', 'Gene.name')]
     
-    # Extract unique group names by trimming the last character (assuming it is a replicate identifier)
-    group_names <- unique(substr(replicate_names, 1, nchar(replicate_names) - 1))
+    # make it work for the triple replicates labeled 1,2,nothing instead of 1,2,3
+    if (all(grepl("(1|2|3)$", replicate_names))) {
+      # all values end in 1, 2, or 3  -> remove last character 
+      group_names <- lapply(replicate_names, function(x) substr(x, 1, nchar(x) - 1))
+    } else {
+      # Use sub to remove only the last dot and numbers that follow (only if only numbers follow)
+      group_names <- sub("\\.[0-9]+$", "", replicate_names)
+    }  
+    
+    # get list of group names 
+    group_names <- as.character(unique(group_names))
     
     # Update the select input choices for DGE groups
     updateSelectInput(session, "DGE_group1", choices = group_names)
@@ -225,7 +234,10 @@ server <- function(input, output, session) {
         paste("Analysis_Results_", input$project, '_', Sys.Date(), ".zip", sep = "")
       },
       content = function(file) {
-        utils::zip(file, files = dir(paste0(aws_prefix, "Data")), flags = '-j')
+        zip::zipr(file, 
+                 files = list.files(paste0(aws_prefix, "Data/"), full.names = T), 
+                 recurse = F, 
+                 include_directories = F)
       }
     )
   })

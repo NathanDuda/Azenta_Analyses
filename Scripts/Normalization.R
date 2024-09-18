@@ -19,9 +19,9 @@
 #gene_lengths <- read.delim("C:/Users/17735/Downloads/ES-CM1.counts.txt")
 
 
-
 normalization_function <- function(project_path, normalization_type, exp_cutoff) {
-  aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  #aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
+  aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
   # get raw_counts file path 
   raw_counts_path <- paste0(project_path, 'hit-counts/raw_counts.csv')
@@ -58,7 +58,19 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   # get the names of each group of replicates
   group_names <- colnames(counts)
   replicate_names <- group_names[!group_names %in% c('ID','Length','Gene.name')]
-  group_names <- lapply(replicate_names, function(x) substr(x, 1, nchar(x) - 1))
+  
+  
+  # make it work for the triple replicates labeled 1,2,nothing instead of 1,2,3
+  if (all(grepl("(1|2|3)$", replicate_names))) {
+    # all values end in 1, 2, or 3  -> remove last character 
+    group_names <- lapply(replicate_names, function(x) substr(x, 1, nchar(x) - 1))
+  } else {
+    # Use sub to remove only the last dot and numbers that follow (only if only numbers follow)
+    group_names <- sub("\\.[0-9]+$", "", replicate_names)
+  }  
+  
+  
+  # get list of group names 
   group_names <- as.character(unique(group_names))
   
   # order the replicate names based on their groups 
