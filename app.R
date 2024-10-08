@@ -34,7 +34,7 @@ ui <- fluidPage(
     "))
   ),
   
-  titlePanel("Azenta Analyses App"),
+  titlePanel("RNAseq Analyses App"),
   
   sidebarPanel(
     selectInput("project", "Select Project Directory:",
@@ -91,7 +91,9 @@ server <- function(input, output, session) {
   
   # Reactive expression to list directories in aws_prefix
   available_dirs <- function() {
-    dirs <- dir(path = paste0(aws_prefix, 'Azenta_Projects'), full.names = TRUE, recursive = FALSE, include.dirs = TRUE)
+    dirs_azenta <- dir(path = paste0(aws_prefix, 'Azenta_Projects'), full.names = TRUE, recursive = FALSE, include.dirs = TRUE)
+    dirs_genomics <- dir(path = paste0(aws_prefix, 'Genomics_Projects'), full.names = TRUE, recursive = FALSE, include.dirs = TRUE)
+    dirs <- c(dirs_azenta, dirs_genomics)
     dir_names <- basename(dirs)
     return(dir_names)
   }
@@ -105,21 +107,28 @@ server <- function(input, output, session) {
   project_path <- reactive({
     req(input$project)
     # Construct the full path to the raw_counts.csv file
-    path <- file.path(gsub('/$', '', aws_prefix), 'Azenta_Projects', input$project, '/')
-    if (!file.exists(path)) {
-      stop("File does not exist: ", path)
-    }
-    return(path)
-  })
+    aws_prefix_trimmed <- gsub('/$', '', aws_prefix)
+    azenta_path <- file.path(aws_prefix_trimmed, 'Azenta_Projects', input$project)
+    genomics_path <- file.path(aws_prefix_trimmed, 'Genomics_Projects', input$project)
+    
+    if (file.exists(azenta_path)) {return(list(path = azenta_path, project_type = 'azenta'))}
+    if (file.exists(genomics_path)) {return(list(path = genomics_path, project_type = 'genomics'))}
+    
+    })
   
   # Update the choices for DGE options based on the raw counts input
   observe({
     req(project_path())
-    raw_counts <- read.csv(paste0(project_path(), 'hit-counts/raw_counts.csv'))  # Use project_path() directly
+    path_info <- project_path()
+    
+    if (path_info$project_type == 'azenta') {raw_counts <- read.csv(file.path(path_info$path, 'hit-counts', 'raw_counts.csv'))}
+    if (path_info$project_type == 'genomics') {raw_counts <- read.delim(file.path(path_info$path, 'Fulltable.txt'))
+                                               raw_counts <- raw_counts %>% select(-starts_with('TPM_'))}
     
     # Assuming the columns you want to exclude are 'ID', 'Length', and 'Gene.name'
     group_names <- colnames(raw_counts)
-    replicate_names <- group_names[!group_names %in% c('ID', 'Length', 'Gene.name')]
+    group_names <- gsub("\\.[^.]*\\.$", "", group_names) # () turned into .. in the column names, if a colname ends in . (the genomics project does) then remove the characters in between so that the colname will end in the replicate #
+    replicate_names <- group_names[!group_names %in% c('ID', 'Length', 'Gene.name','Geneid')]
     
     # make it work for the triple replicates labeled 1,2,nothing instead of 1,2,3
     if (all(grepl("(1|2|3)$", replicate_names))) {

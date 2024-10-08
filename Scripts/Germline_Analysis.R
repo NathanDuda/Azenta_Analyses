@@ -15,7 +15,7 @@ germline_function <- function(normalization_type){
   # get results 
   germline_results <- exp %>%
     merge(., germline_data, by = 'ID') %>% 
-    filter(rowSums(select(., 3:(nrow(group_names) + 2)) == 0) != 4)
+    filter(rowSums(select(., 2:(nrow(group_names) + 1)) == 0) != nrow(group_names))
   
   # if output exists, write to file 
   if (nrow(germline_results) > 0) {
@@ -29,12 +29,12 @@ germline_function <- function(normalization_type){
   }
   
   germline_table <- germline_results %>%
-    pivot_longer(cols = (ncol(germline_results) -2):ncol(germline_results), names_to = "column", values_to = "value") %>%
+    pivot_longer(cols = (ncol(germline_results) - 2):ncol(germline_results), names_to = "column", values_to = "value") %>%
     group_by(ID) %>%
     filter(value == 1) %>%
     summarize(combined = paste(column, collapse = ", ")) %>%
     merge(germline_results, by = "ID") %>%
-    select(ID, Gene.name, germline_layer = combined)
+    select(ID, germline_layer = combined)
   
   return(germline_table)
 }
@@ -48,7 +48,7 @@ plot_upset_germline_function <- function(germline_results, group_names){
   
   
   binary_matrix <- germline_results %>%
-    pivot_longer(cols = 3:(nrow(group_names) + 2)) %>%
+    pivot_longer(cols = 2:(nrow(group_names) + 1)) %>%
     filter(value != 0) %>%
     select(neuroectoderm, endoderm, mesoderm) %>%
     as.data.frame()

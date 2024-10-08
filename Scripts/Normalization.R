@@ -19,21 +19,46 @@
 #gene_lengths <- read.delim("C:/Users/17735/Downloads/ES-CM1.counts.txt")
 
 
+#project_path <- list(path = './Azenta_Projects/30-1041694139/', project_type = 'azenta')
+#project_path <- list(path = './Genomics_Projects/HS24900/', project_type = 'genomics')
+
 normalization_function <- function(project_path, normalization_type, exp_cutoff) {
   #aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
-  # get raw_counts file path 
-  raw_counts_path <- paste0(project_path, 'hit-counts/raw_counts.csv')
+
+  if (project_path$project_type == 'azenta') {
+    raw_counts <- read.csv(file.path(project_path$path, 'hit-counts', 'raw_counts.csv')) %>% select(-Gene.name)
+    #############raw_counts <- read.csv('./Azenta_Projects/30-1041694139/hit-counts/raw_counts.csv')
+    # select gene lengths file
+    file_list <- list.files(paste0(project_path$path, '/hit-counts/'))
+    file_list <- file_list[!file_list %in% c('raw_counts.csv', 'TPM_values.csv')]
+    gene_length_path <- paste0(project_path$path, '/hit-counts/', file_list[1])
+    
+    # import the gene lengths file
+    gene_lengths <- read.csv(gene_length_path, sep = "")
+    
+  }
   
-  # select gene lengths file
-  file_list <- list.files(paste0(project_path, 'hit-counts/'))
-  file_list <- file_list[!file_list %in% c('raw_counts.csv', 'TPM_values.csv')]
-  gene_length_path <- paste0(project_path, 'hit-counts/', file_list[1])
+  if (project_path$project_type == 'genomics') {
+    # import raw_counts file
+    raw_counts <- read.delim(file.path(project_path$path, 'Fulltable.txt'))
+    ############raw_counts <- read.delim('./Genomics_Projects/HS24900/Fulltable.txt')
+    
+    # format raw_counts file to match azenta
+    raw_counts <- raw_counts %>% select(-starts_with("TPM_"))
+    colnames(raw_counts)[1] <- 'ID'
+    
+    # select gene lengths file
+    file_list <- list.files(paste0(project_path$path, '/'))
+    file_list <- file_list[!file_list %in% c('Fulltable.txt')]
+    gene_length_path <- paste0(project_path$path, '/', file_list[1])
+    gene_lengths <- read.delim(gene_length_path, comment.char="#")
+    
+    colnames(gene_lengths)[1] <- 'Geneid'
+    
+    }
   
-  # import the raw_counts and gene lengths files
-  raw_counts <- read.csv(raw_counts_path)
-  gene_lengths <- read.csv(gene_length_path, sep = "")
   
   # import pre-existing data 
   protein_coding_ENSGs <- read.csv(paste0(aws_prefix, "PreExisting_Data/protein_coding_ENSG_ids.tsv"), sep = "")
@@ -41,7 +66,7 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   # keep only protein coding genes
   raw_counts <- raw_counts %>%
     filter(ID %in% protein_coding_ENSGs$ENSG) %>%
-    select(ID, Gene.name, everything())
+    select(ID, everything())
   
   # write protein coding genes to file
   write.table(raw_counts, file = paste0(aws_prefix, 'Data/Raw_Counts_ProteinCodingGenes.tsv'))
@@ -53,11 +78,12 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   
   counts <- raw_counts %>%
     merge(., gene_lengths, by = 'ID') %>%
-    select(ID, Length, Gene.name, everything())
+    select(ID, Length, everything())
   
   # get the names of each group of replicates
+  colnames(counts) <- gsub("\\.[^.]*\\.$", "", colnames(counts)) # () turned into .. in the column names, if a colname ends in . (the genomics project does) then remove the characters in between so that the colname will end in the replicate 
   group_names <- colnames(counts)
-  replicate_names <- group_names[!group_names %in% c('ID','Length','Gene.name')]
+  replicate_names <- group_names[!group_names %in% c('ID','Length')]
   
   
   # make it work for the triple replicates labeled 1,2,nothing instead of 1,2,3
@@ -97,27 +123,29 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   n_replicates <- nrow(ordered_replicate_names) / nrow(group_names)
   
   # reorder the counts dataframe so that every n_replicates columns is a new group
-  counts <- counts %>% select(ID, Length, Gene.name, all_of(ordered_replicate_names$V1))
+  counts <- counts %>% select(ID, Length, all_of(ordered_replicate_names$V1))
   
   # TPM normalize if chosen 
   if (normalization_type == 'TPM') {
+    colnames(counts) <- gsub("_", ".", colnames(counts))
     norm_counts <- counts %>%
-      mutate(across(4:(ncol(counts)), ~ .x / (Length / 1000), .names = "_{col}")) %>%
+      mutate(across(3:(ncol(counts)), ~ .x / (Length / 1000), .names = "_{col}")) %>%
       mutate(across(starts_with("_"), ~ .x / sum(.x) * 1e6, .names = "norm{col}")) %>%
-      select(ID, Gene.name, starts_with("norm_"))
+      select(ID, starts_with("norm_"))
   }
   
   # RPKM normalize if chosen 
   if (normalization_type == 'RPKM') {
+    colnames(counts) <- gsub("_", ".", colnames(counts))
     norm_counts <- counts %>%
-      mutate(across(4:(ncol(counts)), ~ .x / (Length / 1000), .names = "_{col}")) %>%
+      mutate(across(3:(ncol(counts)), ~ .x / (Length / 1000), .names = "_{col}")) %>%
       mutate(across(starts_with("_"), ~ .x / (sum(get(gsub("_", "", cur_column()))) / 1e6), .names = "norm{col}")) %>%
-      select(ID, Gene.name, starts_with("norm_"))
+      select(ID, starts_with("norm_"))
   }
   
   # set expression values lower than exp_cutoff to 0 
   exp <- norm_counts %>%
-    mutate(across(3:ncol(norm_counts), ~ if_else(. <= exp_cutoff, 0, .)))
+    mutate(across(2:ncol(norm_counts), ~ if_else(. <= exp_cutoff, 0, .)))
   
   # write normalized counts to file
   write.table(exp, file = paste0(aws_prefix, 'Data/', normalization_type, '_normalized_exp.tsv'))
@@ -131,7 +159,7 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
     name <- group_names$V1[i]
     
     # determine the starting and ending columns to average 
-    start_col <- (i - 1) * n_replicates + 3
+    start_col <- (i - 1) * n_replicates + 2
     end_col <- start_col + n_replicates - 1
     
     # calculate the average 
@@ -142,11 +170,11 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   
   # select only the averaged columns
   averaged_exp <- exp %>%
-    select(all_of(c('ID', 'Gene.name', group_names$V1)))
+    select(all_of(c('ID', group_names$V1)))
   
   # after averaging, set expression values lower than exp_cutoff to 0 
   averaged_exp <- averaged_exp %>%
-    mutate(across(3:ncol(averaged_exp), ~ if_else(. <= exp_cutoff, 0, .)))
+    mutate(across(2:ncol(averaged_exp), ~ if_else(. <= exp_cutoff, 0, .)))
   
   
   # write averaged expression to file

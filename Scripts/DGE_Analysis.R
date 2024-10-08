@@ -11,7 +11,7 @@ DGE_function <- function(selected_group_1, selected_group_2) {
   
   
   raw_counts <-  read.csv(paste0(aws_prefix, "Data/Raw_Counts_ProteinCodingGenes.tsv"), sep="") %>%
-    select(ID, Gene.name, everything())
+    select(ID, everything())
   
   
   group_names <- read.table(paste0(aws_prefix, "Data/group_names.txt"), quote="\"", comment.char="")
@@ -21,14 +21,14 @@ DGE_function <- function(selected_group_1, selected_group_2) {
   
   
   g1_group_number <- which(group_names$V1 == selected_group_1)
-  g1_col_start <- (1 + (n_replicates * (g1_group_number - 1))) + 2
-  g1_col_end <-  (n_replicates * g1_group_number) + 2
+  g1_col_start <- (1 + (n_replicates * (g1_group_number - 1))) + 1
+  g1_col_end <-  (n_replicates * g1_group_number) + 1
   
   g1 <- group_names[g1_group_number, 'V1']
   
   g2_group_number <- which(group_names$V1 == selected_group_2)
-  g2_col_start <- (1 + (n_replicates * (g2_group_number - 1))) + 2
-  g2_col_end <-  (n_replicates * g2_group_number) + 2
+  g2_col_start <- (1 + (n_replicates * (g2_group_number - 1))) + 1
+  g2_col_end <-  (n_replicates * g2_group_number) + 1
   
   g2 <- group_names[g2_group_number, 'V1']
   
