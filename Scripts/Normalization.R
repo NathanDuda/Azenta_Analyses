@@ -20,6 +20,7 @@
 
 
 #project_path <- list(path = './Azenta_Projects/30-1041694139/', project_type = 'azenta')
+#project_path <- list(path = './Azenta_Projects/30-1005983745/', project_type = 'azenta')
 #project_path <- list(path = './Genomics_Projects/HS24900/', project_type = 'genomics')
 
 normalization_function <- function(project_path, normalization_type, exp_cutoff) {
@@ -125,30 +126,31 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   # reorder the counts dataframe so that every n_replicates columns is a new group
   counts <- counts %>% select(ID, Length, all_of(ordered_replicate_names$V1))
   
-  # TPM normalize if chosen 
-  if (normalization_type == 'TPM') {
-    colnames(counts) <- gsub("_", ".", colnames(counts))
-    norm_counts <- counts %>%
-      mutate(across(3:(ncol(counts)), ~ .x / (Length / 1000), .names = "_{col}")) %>%
-      mutate(across(starts_with("_"), ~ .x / sum(.x) * 1e6, .names = "norm{col}")) %>%
-      select(ID, starts_with("norm_"))
+  norm_counts <- counts 
+  for (group in colnames(counts)[3:ncol(counts)]) {
+    if (normalization_type == 'RPKM') {
+      total_reads <- sum(counts[[group]])
+      total_reads <- total_reads / 1e6 
+      
+      norm_counts <- norm_counts %>%
+        mutate(length_kb = Length / 1000,
+               !!paste0('norm_', group) := .data[[group]] / (length_kb * total_reads))
+    }
+    if (normalization_type == 'TPM') {
+      norm_counts <- norm_counts %>% mutate(n_over_l = .data[[group]] / Length)
+      denominator <- sum(norm_counts$n_over_l) / 1e6
+      
+      norm_counts <- norm_counts %>%
+        mutate(!!paste0('norm_', group) := n_over_l / denominator)
+    }
   }
   
-  # RPKM normalize if chosen 
-  if (normalization_type == 'RPKM') {
-    colnames(counts) <- gsub("_", ".", colnames(counts))
-    norm_counts <- counts %>%
-      mutate(across(3:(ncol(counts)), ~ .x / (Length / 1000), .names = "_{col}")) %>%
-      mutate(across(starts_with("_"), ~ .x / (sum(get(gsub("_", "", cur_column()))) / 1e6), .names = "norm{col}")) %>%
-      select(ID, starts_with("norm_"))
-  }
-  
-  # set expression values lower than exp_cutoff to 0 
-  exp <- norm_counts %>%
-    mutate(across(2:ncol(norm_counts), ~ if_else(. <= exp_cutoff, 0, .)))
+  # keep only normalized columns
+  norm_counts <- norm_counts %>%
+    select(ID, starts_with(paste('norm_')))
   
   # write normalized counts to file
-  write.table(exp, file = paste0(aws_prefix, 'Data/', normalization_type, '_normalized_exp.tsv'))
+  write.table(norm_counts, file = paste0(aws_prefix, 'Data/', normalization_type, '_normalized_exp.tsv'))
   
   
   
@@ -163,13 +165,13 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
     end_col <- start_col + n_replicates - 1
     
     # calculate the average 
-    exp <- exp %>%
+    norm_counts <- norm_counts %>%
       mutate(!!sym(name) := rowMeans(across(all_of(start_col:end_col))))
     
   }
   
   # select only the averaged columns
-  averaged_exp <- exp %>%
+  averaged_exp <- norm_counts %>%
     select(all_of(c('ID', group_names$V1)))
   
   # after averaging, set expression values lower than exp_cutoff to 0 
