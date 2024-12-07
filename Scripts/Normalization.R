@@ -16,20 +16,20 @@
 
 # provide the expression file for any sample found in the hit-counts folder
 # this is only for the gene lengths, so it doesn't matter which one
-#gene_lengths <- read.delim("C:/Users/17735/Downloads/ES-CM1.counts.txt")
+#gene_lengths <- read.delim("C:/Users/17735/Downloads/Azenta_Analyses/Azenta_Projects/30-1005983745/hit-counts/ES-CM1.counts.txt")
 
 
 #project_path <- list(path = './Azenta_Projects/30-1041694139/', project_type = 'azenta')
 #project_path <- list(path = './Azenta_Projects/30-1005983745/', project_type = 'azenta')
 #project_path <- list(path = './Genomics_Projects/HS24900/', project_type = 'genomics')
 
-normalization_function <- function(project_path, normalization_type, exp_cutoff) {
+normalization_function <- function(project_path, normalization_type, exp_cutoff, final_id_format = 'NA') {
   #aws_prefix <- '/mnt/efs/fs1/destination_folder/Azenta_Analyses/'
   aws_prefix <- 'C:/Users/17735/Downloads/Azenta_Analyses/'
   
 
   if (project_path$project_type == 'azenta') {
-    raw_counts <- read.csv(file.path(project_path$path, 'hit-counts', 'raw_counts.csv')) %>% select(-Gene.name)
+    raw_counts <- read.csv(file.path(project_path$path, 'hit-counts', 'raw_counts.csv'))
     #############raw_counts <- read.csv('./Azenta_Projects/30-1041694139/hit-counts/raw_counts.csv')
     # select gene lengths file
     file_list <- list.files(paste0(project_path$path, '/hit-counts/'))
@@ -38,6 +38,12 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
     
     # import the gene lengths file
     gene_lengths <- read.csv(gene_length_path, sep = "")
+    
+    
+    ENSG_symbol <- raw_counts %>%
+      select(ID, Symbol = Gene.name)
+    
+    raw_counts <- raw_counts %>% select(-Gene.name)
     
   }
   
@@ -57,8 +63,8 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
     gene_lengths <- read.delim(gene_length_path, comment.char="#")
     
     colnames(gene_lengths)[1] <- 'Geneid'
-    
-    }
+  }
+  
   
   
   # import pre-existing data 
@@ -182,6 +188,18 @@ normalization_function <- function(project_path, normalization_type, exp_cutoff)
   # write averaged expression to file
   write.table(averaged_exp, file = paste0(aws_prefix, 'Data/Averaged_', normalization_type, '_exp.tsv'))
   
+  
+  if (final_id_format == 'symbol') {
+    symbol_averaged_exp <- averaged_exp %>%
+      merge(., ENSG_symbol, by = 'ID') %>%
+      select(Symbol, ID, everything())
+    
+    return(symbol_averaged_exp)
+  }
+  
+  if (final_id_format == 'ENSG') {
+    return(averaged_exp)
+  }
   
 }
 
